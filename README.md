@@ -12,7 +12,7 @@ a killer solution
 - db
   - Postgres database (datalake)
 
-!(Architecture)[./architecture.png]
+![Architecture](./architecture.png)
 ---
 |Technology|Pros|Cons|
 |----------|----|----|
