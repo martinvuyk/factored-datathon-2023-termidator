@@ -7,7 +7,7 @@ a killer solution
 ## Architecture
 - backend
   - REST server that handles data streaming and triggers batch processing jobs
-- power_bi
+- Jupyter Notebooks
   - data visualization and analysis tool
 - db
   - Postgres database (datalake)
