@@ -12,7 +12,7 @@ def getdata(filename: str):
 def json_gz_to_csv(filename: str):
     df = pd.DataFrame(getdata(filename))
 
-    df.to_csv(f"{filename.split('.')[0]}.csv", index=False, escapechar="|")
+    df.to_csv(f"{filename.split('.json.gz')[0]}.csv", index=False, escapechar="|")
 
 
 def json_gz_to_df(filename: str):
