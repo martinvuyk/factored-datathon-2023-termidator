@@ -10,6 +10,8 @@
   - SQL_PORT=5432
   - BACKEND_HOST=IPv4_addr
   - BACKEND_PORT=4595
+  - SAS_URL=
+  - SAS_TOKEN=
 3. write in a terminal: "docker compose up"
 
 #### Requirements:
