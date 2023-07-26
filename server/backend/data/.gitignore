@@ -2,3 +2,5 @@
 !.gitignore
 !*.py
 !requirements.txt
+blobs/*
+!blobs/__init__.py
