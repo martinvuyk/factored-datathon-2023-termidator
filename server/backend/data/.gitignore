@@ -4,3 +4,5 @@
 !requirements.txt
 blobs/*
 !blobs/__init__.py
+stream/*
+!stream/__init__.py
