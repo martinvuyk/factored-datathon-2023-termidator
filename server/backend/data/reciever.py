@@ -1,8 +1,9 @@
 import asyncio
 from azure.eventhub.aio import EventHubConsumerClient
 
-EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.net/;SharedAccessKeyName=datathon_listener;SharedAccessKey=sJJnyi8GGTBAa55jY89kacoT6hXAzWx2B+AEhCPEKYE=;EntityPath=factored_datathon_amazon_review"
 EVENT_HUB_NAME = "factored-datathon"
+CONSUMER_GROUP = "termidator"
+EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.net/;SharedAccessKeyName=datathon_listener;SharedAccessKey=sJJnyi8GGTBAa55jY89kacoT6hXAzWx2B+AEhCPEKYE=;EntityPath=factored_datathon_amazon_review_1"
 
 
 async def on_event(partition_context, event):
@@ -20,8 +21,9 @@ async def main():
     # Create a consumer client for the event hub.
     client = EventHubConsumerClient.from_connection_string(
         EVENT_HUB_CONNECTION_STR,
-        consumer_group="$Default",
+        consumer_group=CONSUMER_GROUP,
         eventhub_name=EVENT_HUB_NAME,
+        logging_enable=True,
     )
     async with client:
         # Call the receive method. Read from the beginning of the
