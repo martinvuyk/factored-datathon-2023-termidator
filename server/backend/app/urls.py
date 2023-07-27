@@ -13,4 +13,6 @@ urlpatterns = [
         name="swagger",
     ),
     path("something", SomethingView.as_view(), name="something"),
+    path("amazon_metadata", AmazonMetadataView.as_view(), name="amazon_metadata"),
+    path("amazon_review", AmazonReviewView.as_view(), name="amazon_review"),
 ]

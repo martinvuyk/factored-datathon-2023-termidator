@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Iterator, Dict, Optional
 from rest_framework.views import APIView
 from django.http import JsonResponse
+import traceback
 
 
 class APIModelStructure:
@@ -58,6 +59,7 @@ class ApiViewMetaClass(type):
                         raise Exception(str(e), 500)
                     raise
             except Exception as e:
+                print(traceback.print_exc())
                 response = ApiResponse(success=False, code=e.args[1], error=e.args[0])
             finally:
                 print(response)
