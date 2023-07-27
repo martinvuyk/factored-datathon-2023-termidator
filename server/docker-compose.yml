@@ -1,18 +1,18 @@
 version: "3.9"
 
 services:
-  notebooks:
-    build:
-      context: ./notebooks
-      dockerfile: Dockerfile
-    command: >
-      sh -c "jupyter notebook"
-    env_file:
-      - .env
-    ports:
-      - "8888:8888"
-    depends_on:
-      - db
+  # notebooks:
+  #   build:
+  #     context: ./notebooks
+  #     dockerfile: Dockerfile
+  #   command: >
+  #     sh -c "jupyter notebook"
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "8888:8888"
+  #   depends_on:
+  #     - db
   backend:
     build:
       context: ./backend
