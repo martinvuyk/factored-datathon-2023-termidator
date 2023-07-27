@@ -8,7 +8,7 @@ EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.n
 
 async def on_event(partition_context, event):
     json_object = event.body_as_str(encoding="UTF-8")
-    print((f"{json_object}"))
+    print(json_object)
     with open(f"./stream/{partition_context.partition_id}.json", "w") as outfile:
         outfile.write(json_object)
 
@@ -23,7 +23,6 @@ async def main():
         EVENT_HUB_CONNECTION_STR,
         consumer_group=CONSUMER_GROUP,
         eventhub_name=EVENT_HUB_NAME,
-        logging_enable=True,
     )
     async with client:
         # Call the receive method. Read from the beginning of the
