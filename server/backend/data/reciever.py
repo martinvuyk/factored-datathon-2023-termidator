@@ -1,9 +1,9 @@
 import asyncio
 from azure.eventhub.aio import EventHubConsumerClient
 
-EVENT_HUB_NAME = "factored-datathon"
+EVENT_HUB_NAME = "factored_datathon_amazon_reviews_1"
 CONSUMER_GROUP = "termidator"
-EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.net/;SharedAccessKeyName=datathon_listener;SharedAccessKey=sJJnyi8GGTBAa55jY89kacoT6hXAzWx2B+AEhCPEKYE=;EntityPath=factored_datathon_amazon_review_1"
+EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.net/;SharedAccessKeyName=datathon_group_1;SharedAccessKey=2GETvVt0FxyM0bo0Qau4inlmC/w3t4Uut+AEhAnAEgk=;EntityPath=factored_datathon_amazon_reviews_1"
 
 
 async def on_event(partition_context, event):
