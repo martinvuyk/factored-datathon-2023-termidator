@@ -6,8 +6,13 @@ EVENT_HUB_NAME = "factored_datathon_amazon_reviews_1"
 CONSUMER_GROUP = "termidator"
 EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.net/;SharedAccessKeyName=datathon_group_1;SharedAccessKey=2GETvVt0FxyM0bo0Qau4inlmC/w3t4Uut+AEhAnAEgk=;EntityPath=factored_datathon_amazon_reviews_1"
 
+counter = 0
+
 
 async def on_event(partition_context, event):
+    global counter
+    counter += 1
+    print(counter)
     json_object = event.body_as_str(encoding="UTF-8")
     with gzip.open(
         f"./stream/partition_{partition_context.partition_id}.json.gz",
