@@ -8,7 +8,6 @@ EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.n
 
 async def on_event(partition_context, event):
     json_object = event.body_as_str(encoding="UTF-8")
-    print(json_object)
     with open(f"./stream/{partition_context.partition_id}.json", "w") as outfile:
         outfile.write(json_object)
 
