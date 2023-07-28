@@ -1,5 +1,6 @@
 import asyncio
 from azure.eventhub.aio import EventHubConsumerClient
+import gzip
 
 EVENT_HUB_NAME = "factored_datathon_amazon_reviews_1"
 CONSUMER_GROUP = "termidator"
@@ -10,21 +11,21 @@ async def on_event(partition_context, event):
     try:
         if previous != partition_context.partition_id:
             counter = 0
-        else:
-            counter += 1
     except UnboundLocalError:
         counter = 0
-    print(f"downloading partition: {partition_context.partition_id}")
     json_object = event.body_as_str(encoding="UTF-8")
-    with open(
-        f"./stream/partition_{partition_context.partition_id}_{counter}.json",
-        "w",
+    with gzip.open(
+        f"./stream/partition_{partition_context.partition_id}_{counter}.json.gz",
+        "at",
+        encoding="UTF-8",
     ) as outfile:
         outfile.write(json_object)
+        outfile.write("\n")
+    previous = partition_context.partition_id
+    counter += 1
 
     # Update the checkpoint so that the program doesn't read the events
     # that it has already read when you run it next time.
-    previous = partition_context.partition_id
     await partition_context.update_checkpoint(event)
 
 
