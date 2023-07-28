@@ -8,21 +8,14 @@ EVENT_HUB_CONNECTION_STR = "Endpoint=sb://factored-datathon.servicebus.windows.n
 
 
 async def on_event(partition_context, event):
-    try:
-        if previous != partition_context.partition_id:
-            counter = 0
-    except UnboundLocalError:
-        counter = 0
     json_object = event.body_as_str(encoding="UTF-8")
     with gzip.open(
-        f"./stream/partition_{partition_context.partition_id}_{counter}.json.gz",
+        f"./stream/partition_{partition_context.partition_id}.json.gz",
         "at",
         encoding="UTF-8",
     ) as outfile:
         outfile.write(json_object)
         outfile.write("\n")
-    previous = partition_context.partition_id
-    counter += 1
 
     # Update the checkpoint so that the program doesn't read the events
     # that it has already read when you run it next time.
