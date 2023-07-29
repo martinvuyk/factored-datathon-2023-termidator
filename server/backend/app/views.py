@@ -31,6 +31,12 @@ class SomethingView(APIViewStructure, metaclass=ApiViewMetaClass):
         return ApiResponse(success=True, code=201, data="something")
 
 
+def filter_nan_in_str_field(df):
+    return df.apply(lambda x: x if not isinstance(x, float) else None).apply(
+        lambda x: x if x is not None else ""
+    )
+
+
 def filter_date(date: str):
     try:
         datetime.datetime.strptime(date, "%B %d, %Y")
@@ -79,6 +85,7 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
         parsed = time.time()
         print(f"parsing took: {parsed - start_request}")
         df.drop_duplicates(subset=["asin"], inplace=True)
+        df["details"] = df["details"].apply(lambda x: x if x is not None else "")
         df["date"] = df["date"].apply(filter_date)
         df["rank"] = df["rank"].apply(filter_int).fillna(0).apply(lambda x: int(x))
         df["description"] = (
@@ -95,17 +102,17 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
                 asin=row.asin,
                 also_buy=row.also_buy,
                 also_view=row.also_view,
-                brand=row.brand,
+                brand=row.brand[:255],
                 category=row.category,
                 date=row.date,
                 description=row.description,
                 details=row.details,
                 feature=row.feature,
                 image=row.image,
-                main_cat=row.main_cat,
+                main_cat=row.main_cat[:255],
                 price=row.price,
                 rank=row.rank,
-                title=row.title,
+                title=row.title[:255],
             )
             for row in df.itertuples()
         ]
@@ -139,13 +146,31 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
         print("recieved request")
         start_request = time.time()
         data = json.loads(request.data)
-        df = pd.DataFrame(data, index=data["asin"])
+        if "asin" not in data.keys():
+            raise Exception("review_has_no_asin", 400)
+        df = pd.DataFrame(
+            data, index=data["asin"] if isinstance(data["asin"], list) else [0]
+        )
         parsed = time.time()
         print(f"parsing took: {parsed - start_request}")
         df.drop_duplicates(subset=["asin"], inplace=True)
-        df["unixReviewTime"] = df["unixReviewTime"].fillna(
-            datetime.datetime.now().timestamp()
-        )
+        if "unixReviewTime" in df:
+            df["unixReviewTime"] = df["unixReviewTime"].fillna(
+                datetime.datetime.now().timestamp()
+            )
+        else:
+            df["unixReviewTime"] = datetime.datetime.now().timestamp()
+        if "vote" not in df:
+            df["vote"] = 0
+        if "style" not in df:
+            df["style"] = ""
+        if "image" not in df:
+            df["image"] = ""
+        if "reviewText" not in df:
+            df["reviewText"] = ""
+        if "summary" not in df:
+            df["summary"] = ""
+
         df["verified"] = df["verified"].apply(lambda x: bool(x))
         df["reviewText"] = df["reviewText"].apply(
             lambda x: "" if x is None or x == "null" else x
@@ -156,6 +181,9 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
         df["summary"] = df["summary"].apply(
             lambda x: "" if x is None or x == "null" else x
         )
+        df["vote"] = df["vote"].fillna(0)
+        df["style"] = filter_nan_in_str_field(df["style"])
+        df["image"] = filter_nan_in_str_field(df["image"])
         cleaning = time.time()
         print(f"cleaning took: {cleaning - parsed}")
 
