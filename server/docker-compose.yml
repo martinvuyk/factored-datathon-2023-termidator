@@ -1,18 +1,20 @@
 version: "3.9"
 
 services:
-  # notebooks:
-  #   build:
-  #     context: ./notebooks
-  #     dockerfile: Dockerfile
-  #   command: >
-  #     sh -c "jupyter notebook"
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "8888:8888"
-  #   depends_on:
-  #     - db
+  notebooks:
+    build:
+      context: ./notebooks
+      dockerfile: Dockerfile
+    command: >
+      sh -c "jupyter notebook --allow-root --no-browser --port=8888 --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''"
+    env_file:
+      - .env
+    ports:
+      - "8888:8888"
+    depends_on:
+      - db
+    volumes:
+      - ./notebooks:/container
   backend:
     build:
       context: ./backend
@@ -38,6 +40,9 @@ services:
       POSTGRES_USER: ${SQL_USER:-user}
       POSTGRES_PASSWORD: ${SQL_PASSWORD:-password}
       POSTGRES_DB: ${SQL_DATABASE:-postgres}
+      # for connecting outside the local docker-compose network namespace
+      # update /var/lib/postgresql/data/pg_hba.conf adding a line: 
+      # host all all {BACKEND_HOST} trust
     volumes:
       - postgres_data:/var/lib/postgresql/data/
 

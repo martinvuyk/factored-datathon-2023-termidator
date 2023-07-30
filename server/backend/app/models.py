@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 from app.data_models.apistructure import APIModelStructure
-import datetime
 
 
 class AmazonMetadataModel(APIModelStructure, models.Model):

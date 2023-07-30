@@ -1,11 +1,9 @@
-FROM python:3.10-alpine
+FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /container
-
-RUN apk add build-base
 
 COPY requirements.txt /container
 RUN python3 -m pip install --upgrade pip

@@ -1,6 +1,24 @@
 import gzip
 import pandas as pd
 from ast import literal_eval
+import psycopg2
+import os
+
+
+def df_from_sql(query: str):
+    host, port, dbname, username, pwd = (
+        os.getenv("SQL_HOST"),
+        os.getenv("SQL_PORT"),
+        os.getenv("SQL_DATABASE"),
+        os.getenv("SQL_USER"),
+        os.getenv("SQL_PASSWORD"),
+    )
+
+    with psycopg2.connect(
+        f"host='{host}' port={port} dbname='{dbname}' user={username} password={pwd}"
+    ) as conn:
+        dat = pd.read_sql_query(query, conn)
+    return dat
 
 
 def getdata(filename: str):
