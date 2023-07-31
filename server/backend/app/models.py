@@ -36,3 +36,17 @@ class AmazonReviewModel(APIModelStructure, models.Model):
     style = models.JSONField(null=True, blank=True)
     vote = models.PositiveSmallIntegerField(null=True, blank=True)
     image = models.JSONField(null=True, blank=True)
+
+
+class ReviewEmotionsModel(APIModelStructure, models.Model):
+    asin = models.CharField(
+        max_length=255, unique=False, null=False, blank=False, db_index=True
+    )
+    overall = models.FloatField(null=False, blank=False)
+    anger = models.FloatField(null=False, blank=False)
+    disgust = models.FloatField(null=False, blank=False)
+    fear = models.FloatField(null=False, blank=False)
+    joy = models.FloatField(null=False, blank=False)
+    neutral = models.FloatField(null=False, blank=False)
+    sadness = models.FloatField(null=False, blank=False)
+    surprise = models.FloatField(null=False, blank=False)

@@ -1,32 +1,34 @@
 version: "3.9"
 
 services:
-  notebooks:
-    build:
-      context: ./notebooks
-      dockerfile: Dockerfile
-    command: >
-      sh -c "jupyter notebook --allow-root --no-browser --port=8888 --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''"
-    env_file:
-      - .env
-    ports:
-      - "8888:8888"
-    depends_on:
-      - db
-    volumes:
-      - ./notebooks:/container
+  # notebooks:
+  #   build:
+  #     context: ./notebooks
+  #     dockerfile: Dockerfile
+  #   command: >
+  #     sh -c "jupyter notebook --allow-root --no-browser --port=8888 --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''"
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "8888:8888"
+  #   depends_on:
+  #     - db
+  #   volumes:
+  #     - ./notebooks:/container
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     command: >
-      sh -c "python manage.py makemigrations &&
+      sh -c "python manage.py makemigrations app &&
              python manage.py migrate &&
              python manage.py runserver 0.0.0.0:4595"
     env_file:
       - .env
     ports:
       - "${BACKEND_PORT:-4595}:4595"
+    volumes:
+      - ./backend/app/migrations:/container/app/migrations
     depends_on:
       - db
   db:

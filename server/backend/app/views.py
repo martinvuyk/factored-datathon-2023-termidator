@@ -65,19 +65,35 @@ def filter_price(string: str):
 class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
     """Endpoint for Amazon Metadata"""
 
-    def get(self, request, *args, **kwargs):
-        """Returns Something
+    def post(self, request, *args, **kwargs):
+        """Creates AmazonMetadataModel instances in the DB
+
+        Parameters
+        ----------
+        body: `Dict`
+            - asin: `str`
+            - also_buy: `List[str]`
+            - also_view: `List[str]`
+            - brand: `str`
+            - category: `str`
+            - date: `str`
+            - description: `str`
+            - details: `str`
+            - feature: `List[str]`
+            - image: `List[str]`
+            - main_cat: `str`
+            - price: `int`
+            - rank: `str`
+            - title: `str`
 
         Returns
         -------
         ret: `ApiResponse`:
             - success: ``True``
-            - data: ``"something"``
-            - code: 200
+            - data: ``"total time: {time.time() - start_request}"``
+            - code: 201
         """
-        return ApiResponse(success=True, code=200, data="something")
 
-    def post(self, request, *args, **kwargs):
         print("recieved request")
         start_request = time.time()
         data = json.loads(request.data)
@@ -131,18 +147,67 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
 
 class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
     def get(self, request, *args, **kwargs):
-        """Returns Something
+        """Returns the ids of all reviews in db if asin=None in query_params
+
+        Parameters
+        ----------
+        query_params: `Dict`
+            - asin: `Optional[str]`
+        Returns
+        -------
+        ret: `ApiResponse`:
+            - success: ``True``
+            - data: `List[str] | Dict`
+            - code: 201
+        """
+        params = request.query_params.get("asin")
+        if params is None:
+            return ApiResponse(
+                success=True,
+                code=200,
+                data=list(
+                    AmazonReviewModel.objects.values_list("asin", flat=True)
+                    .distinct()
+                    .order_by()
+                ),
+            )
+        return ApiResponse(
+            success=True,
+            code=200,
+            data=[
+                row
+                for row in AmazonReviewModel.objects.filter(asin=params)
+                .values("asin", "overall", "reviewText", "summary")
+                .all()
+            ],
+        )
+
+    def post(self, request, *args, **kwargs):
+        """Creates AmazonReviewModel instances in the DB
+
+        Parameters
+        ----------
+        body: `Series[Dict]`
+            - asin: `str`
+            - overall: `float`
+            - reviewText: `str`
+            - reviewerID: `str`
+            - reviewerName: `str`
+            - summary: `str`
+            - unixReviewTime: `int`
+            - verified: `bool`
+            - style: `str`
+            - vote: `int`
+            - image: `str`
 
         Returns
         -------
         ret: `ApiResponse`:
             - success: ``True``
-            - data: ``"something"``
-            - code: 200
+            - data: ``"total time: {time.time() - start_request}"``
+            - code: 201
         """
-        return ApiResponse(success=True, code=200, data="something")
 
-    def post(self, request, *args, **kwargs):
         print("recieved request")
         start_request = time.time()
         data = json.loads(request.data)
@@ -214,3 +279,38 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
         return ApiResponse(
             success=True, code=201, data=f"total time: {time.time() - start_request}"
         )
+
+
+class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
+    """Endpoint for Amazon Metadata"""
+
+    def post(self, request, *args, **kwargs):
+        """Returns Something
+
+        Parameters
+        ----------
+        body: `Dict`
+            - asin: str
+            - overall: float
+            - anger: float
+            - disgust: float
+            - fear: float
+            - joy: float
+            - neutral: float
+            - sadness: float
+            - surprise: float
+        Returns
+        -------
+        ret: `ApiResponse`:
+            - success: ``True``
+            - data: ``"something"``
+            - code: 200
+        """
+
+        data = json.loads(request.data)
+
+        ReviewEmotionsModel.objects.bulk_create(
+            [ReviewEmotionsModel(**data)], ignore_conflicts=True
+        )
+
+        return ApiResponse(success=True, code=201, data="")
