@@ -44,7 +44,7 @@ async def main():
     for review_id in review_ids:
         asyncio.create_task(post_result(classifier, review_id))
 
-    await asyncio.gather()
+    await asyncio.wait(asyncio.all_tasks())
 
 
 if __name__ == "__main__":

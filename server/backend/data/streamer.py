@@ -3,30 +3,70 @@ import os
 import requests
 import time
 import json
+import asyncio
+from typing import List
 
 BATCH_DIR = "./blobs"
 STREAM_DIR = "./stream"
 BATCH_FILES = [filename for filename in os.listdir(BATCH_DIR) if ".json.gz" in filename]
 BACKEND_SERVER = f"{os.getenv('BACKEND_HOST', 'http://localhost')}:{os.getenv('BACKEND_PORT', '4595')}"
 
+amzn_reviews = [
+    "overall",
+    "reviewText",
+    "reviewerID",
+    "reviewerName",
+    "summary",
+    "unixReviewTime",
+    "verified",
+    "style",
+    "vote",
+    "image",
+]
+amzn_metadata = [
+    "asin",
+    "also_buy",
+    "also_view",
+    "brand",
+    "category",
+    "date",
+    "description",
+    "details",
+    "feature",
+    "image",
+    "main_cat",
+    "price",
+    "rank",
+    "title",
+]
 
-def post_to_endpoint(metadata=True):
+
+async def parse_and_send(partition: str, endpoint: str, cols: List[str]):
+    start_partition = time.time()
+    df = json_gz_to_df(f"{BATCH_DIR}/{partition}")
+    df.drop(columns=df.columns.difference(cols), inplace=True)
+    payload = df.to_json()
+    print(f"time to prepare payload: {time.time() - start_partition}")
+    resp = requests.post(
+        f"{BACKEND_SERVER}/api/v1/{endpoint}",
+        json=payload,
+    )
+    print(resp.json())
+
+
+async def post_to_endpoint(metadata=True):
     if metadata:
         endpoint = "amazon_metadata"
         partitions = [filename for filename in BATCH_FILES if "metadata" in filename]
+        cols = amzn_metadata
     else:
         endpoint = "amazon_review"
         partitions = [filename for filename in BATCH_FILES if "review" in filename]
+        cols = amzn_reviews
     start = time.time()
     for partition in partitions:
-        start_partition = time.time()
-        payload = json_gz_to_df(f"{BATCH_DIR}/{partition}").to_json()
-        print(f"time to prepare payload: {time.time() - start_partition}")
-        resp = requests.post(
-            f"{BACKEND_SERVER}/api/v1/{endpoint}",
-            json=payload,
-        )
-        print(resp.json())
+        asyncio.create_task(parse_and_send(partition, endpoint, cols))
+    await asyncio.wait(asyncio.all_tasks())
     print(f"total time elapsed: {time.time() - start}")
 
 
@@ -58,37 +98,7 @@ def stream_to_endpoint():
         print(resp.json())
 
 
-amzn_reviews = [
-    "overall",
-    "reviewText",
-    "reviewerID",
-    "reviewerName",
-    "summary",
-    "unixReviewTime",
-    "verified",
-    "style",
-    "vote",
-    "image",
-]
-amzn_metadata = [
-    "also_buy",
-    "also_view",
-    "asin",
-    "brand",
-    "category",
-    "date",
-    "description",
-    "details",
-    "feature",
-    "image",
-    "main_cat",
-    "price",
-    "rank",
-    "tech1",
-    "tech2",
-    "title",
-]
 # get_amzn_reviews(amzn_metadata)
 # get_amzn_reviews(amzn_reviews, metadata=False)
-post_to_endpoint(metadata=True)
+asyncio.run(post_to_endpoint(metadata=True))
 # stream_to_endpoint()
