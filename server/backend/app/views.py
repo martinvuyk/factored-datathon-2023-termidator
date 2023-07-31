@@ -282,10 +282,10 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
 
 
 class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
-    """Endpoint for Amazon Metadata"""
+    """Endpoint for Review Emotions"""
 
     def post(self, request, *args, **kwargs):
-        """Returns Something
+        """Creates a single instance of a Review Emotion Model
 
         Parameters
         ----------
@@ -309,8 +309,13 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
 
         data = json.loads(request.data)
 
-        ReviewEmotionsModel.objects.bulk_create(
-            [ReviewEmotionsModel(**data)], ignore_conflicts=True
-        )
+        message = "exists"
+        if (
+            not ReviewEmotionsModel.objects.filter(asin=data["asin"])
+            .filter(**data)
+            .exists()
+        ):
+            ReviewEmotionsModel.objects.create(**data)
+            message = "created"
 
-        return ApiResponse(success=True, code=201, data="")
+        return ApiResponse(success=True, code=201, data=message)
