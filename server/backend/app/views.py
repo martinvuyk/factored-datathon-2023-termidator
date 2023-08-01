@@ -154,6 +154,7 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
         ----------
         query_params: `Dict`
             - asin: `Optional[str]`
+
         Returns
         -------
         ret: `ApiResponse`:
@@ -300,12 +301,20 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
             - neutral: float
             - sadness: float
             - surprise: float
+
         Returns
         -------
         ret: `ApiResponse`:
             - success: ``True``
             - data: `List[str]`
             - code: 200
+
+        Notes
+        -----
+        in the end I'm only using overall, anger, disgust, joy for vector search
+        because postgis only supports up to 4D vectors. And Its already been a lot
+        of work getting this functional without changing any table, I don't want to migrate to pgvector
+        where I would have to create and populate a new table
         """
         k, overall, anger, disgust, fear, joy, neutral, sadness, surprise = (
             request.query_params.get("k"),
@@ -350,6 +359,7 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
             - neutral: float
             - sadness: float
             - surprise: float
+
         Returns
         -------
         ret: `ApiResponse`:
@@ -370,3 +380,11 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
             message = "created"
 
         return ApiResponse(success=True, code=201, data=message)
+
+
+class PCAEncodedReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
+    """Endpoint for PCA (4) encoded Review Emotions
+    TODO: https://builtin.com/machine-learning/pca-in-python
+    """
+
+    pass
