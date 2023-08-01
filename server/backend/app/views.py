@@ -8,6 +8,7 @@ import pandas as pd
 import re
 import datetime
 import time
+from django.core import serializers
 
 
 class SomethingView(APIViewStructure, metaclass=ApiViewMetaClass):
@@ -284,6 +285,56 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
 class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
     """Endpoint for Review Emotions"""
 
+    def get(self, request, *args, **kwargs):
+        """Returns k nearest neighbors ("asin") to given emotion review
+
+        Parameters
+        ----------
+        query_params: `Dict`
+            - k: int
+            - overall: float
+            - anger: float
+            - disgust: float
+            - fear: float
+            - joy: float
+            - neutral: float
+            - sadness: float
+            - surprise: float
+        Returns
+        -------
+        ret: `ApiResponse`:
+            - success: ``True``
+            - data: `List[str]`
+            - code: 200
+        """
+        k, overall, anger, disgust, fear, joy, neutral, sadness, surprise = (
+            request.query_params.get("k"),
+            request.query_params.get("overall"),
+            request.query_params.get("anger"),
+            request.query_params.get("disgust"),
+            request.query_params.get("fear"),
+            request.query_params.get("joy"),
+            request.query_params.get("neutral"),
+            request.query_params.get("sadness"),
+            request.query_params.get("surprise"),
+        )
+        param = ", ".join(
+            # [overall, anger, disgust, fear, joy, neutral, sadness, surprise]
+            [overall, anger, disgust, joy]
+        )
+
+        sql = f"""
+        SELECT 1 as id, a.asin FROM (
+            SELECT asin, ST_MakePoint(overall, anger, disgust, joy) as vect
+            FROM app_reviewemotionsmodel
+            ORDER BY asin
+        ) as a
+        ORDER BY a.vect <-> ST_MakePoint({param})
+        LIMIT %s;
+        """
+        objs = ReviewEmotionsModel.objects.raw(sql, params=[k])
+        return ApiResponse(success=True, code=200, data=[obj.asin for obj in objs])
+
     def post(self, request, *args, **kwargs):
         """Creates a single instance of a Review Emotion Model
 
@@ -304,7 +355,7 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
         ret: `ApiResponse`:
             - success: ``True``
             - data: ``"something"``
-            - code: 200
+            - code: 201
         """
 
         data = json.loads(request.data)

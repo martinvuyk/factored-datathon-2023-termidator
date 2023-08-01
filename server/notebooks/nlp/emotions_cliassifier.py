@@ -4,6 +4,7 @@ import asyncio
 import os
 import json
 from typing import TypedDict, List
+import random
 
 BACKEND_SERVER = f"{os.getenv('BACKEND_HOST', 'http://localhost')}:{os.getenv('BACKEND_PORT', '4595')}"
 
@@ -11,6 +12,34 @@ BACKEND_SERVER = f"{os.getenv('BACKEND_HOST', 'http://localhost')}:{os.getenv('B
 class ClassifierResult(TypedDict):
     label: str
     score: float
+
+
+def get_knn_from_single_random_review():
+    classifier = pipeline(
+        "text-classification",
+        model="j-hartmann/emotion-english-distilroberta-base",
+        top_k=7,
+    )
+    """https://huggingface.co/j-hartmann/emotion-english-distilroberta-base"""
+    review_ids = requests.get(
+        f"{BACKEND_SERVER}/api/v1/amazon_review", params={"asin": None}
+    ).json()["data"]
+
+    review_asin_id = random.choice(review_ids)
+
+    review = requests.get(
+        f"{BACKEND_SERVER}/api/v1/amazon_review", params={"asin": review_asin_id}
+    ).json()["data"][0]
+    review_text = f"{review['reviewText']} {review['summary']}"[:512]
+    results: List[ClassifierResult] = classifier(review_text)[0]
+    data = {result["label"]: result["score"] for result in results}
+    result = dict(overall=review["overall"], **data)
+
+    resp = requests.get(
+        f"{BACKEND_SERVER}/api/v1/review_emotions",
+        params={"k": 5, **result},
+    )
+    print(resp.json())
 
 
 async def post_result(classifier, review_id: str):
@@ -48,4 +77,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
+    get_knn_from_single_random_review()
