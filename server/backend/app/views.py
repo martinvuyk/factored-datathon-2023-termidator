@@ -8,34 +8,6 @@ import pandas as pd
 import re
 import datetime
 import time
-from django.core import serializers
-
-
-class SomethingView(APIViewStructure, metaclass=ApiViewMetaClass):
-    """Endpoint for something"""
-
-    def get(self, request, *args, **kwargs):
-        """Returns Something
-
-        Returns
-        -------
-        ret: `ApiResponse`:
-            - success: ``True``
-            - data: ``"something"``
-            - code: 200
-        """
-        return ApiResponse(success=True, code=200, data="something")
-
-    def post(self, request, *args, **kwargs):
-        df = pd.DataFrame(json.loads(request.data))
-        print(df.columns)
-        return ApiResponse(success=True, code=201, data="something")
-
-
-def filter_nan_in_str_field(df):
-    return df.apply(lambda x: x if not isinstance(x, float) else None).apply(
-        lambda x: x if x is not None else ""
-    )
 
 
 def filter_date(date: str):
@@ -179,7 +151,7 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
             data=[
                 row
                 for row in AmazonReviewModel.objects.filter(asin=params)
-                .values("asin", "overall", "reviewText", "summary")
+                .values("asin", "reviewerID", "overall", "reviewText", "summary")
                 .all()
             ],
         )
@@ -213,44 +185,62 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
         print("recieved request")
         start_request = time.time()
         data = json.loads(request.data)
-        if "asin" not in data.keys():
-            raise Exception("review_has_no_asin", 400)
         df = pd.DataFrame(
             data, index=data["asin"] if isinstance(data["asin"], list) else [0]
         )
         parsed = time.time()
         print(f"parsing took: {parsed - start_request}")
-        df.drop_duplicates(subset=["asin"], inplace=True)
-        if "unixReviewTime" in df:
+        df.drop_duplicates(subset=["asin", "reviewerID"], inplace=True)
+        if (
+            any(
+                df["asin"].apply(
+                    lambda x: True
+                    if isinstance(x, float) or x.lower() == "nan"
+                    else False
+                )
+            )
+            or any(
+                df["overall"].apply(lambda x: True if isinstance(x, float) else False)
+            )
+            or any(
+                df["reviewerID"].apply(lambda x: True if x.lower() == "nan" else False)
+            )
+        ):
+            raise Exception("why is this data so ugly", 400)
+        if "unixReviewTime" in df.columns:
             df["unixReviewTime"] = df["unixReviewTime"].fillna(
                 datetime.datetime.now().timestamp()
             )
         else:
             df["unixReviewTime"] = datetime.datetime.now().timestamp()
-        if "vote" not in df:
+        if "vote" not in df.columns:
             df["vote"] = 0
-        if "style" not in df:
+        if "style" not in df.columns:
             df["style"] = ""
-        if "image" not in df:
+        if "image" not in df.columns:
             df["image"] = ""
-        if "reviewText" not in df:
+        if "reviewText" not in df.columns:
             df["reviewText"] = ""
-        if "summary" not in df:
+        if "summary" not in df.columns:
             df["summary"] = ""
 
         df["verified"] = df["verified"].apply(lambda x: bool(x))
         df["reviewText"] = df["reviewText"].apply(
-            lambda x: "" if x is None or x == "null" else x
+            lambda x: "" if x is None or x.lower() == "nan" else x
         )
         df["reviewerName"] = df["reviewerName"].apply(
-            lambda x: "" if x is None or x == "null" else x
+            lambda x: "" if x is None or x.lower() == "nan" else x
         )
         df["summary"] = df["summary"].apply(
-            lambda x: "" if x is None or x == "null" else x
+            lambda x: "" if x is None or x.lower() == "nan" else x
+        )
+        df["image"] = df["image"].apply(
+            lambda x: "" if x is None or x.lower() == "nan" else x
+        )
+        df["style"] = df["style"].apply(
+            lambda x: "" if x is None or x.lower() == "nan" else x
         )
         df["vote"] = df["vote"].fillna(0)
-        df["style"] = filter_nan_in_str_field(df["style"])
-        df["image"] = filter_nan_in_str_field(df["image"])
         cleaning = time.time()
         print(f"cleaning took: {cleaning - parsed}")
 
@@ -327,19 +317,27 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
             request.query_params.get("sadness"),
             request.query_params.get("surprise"),
         )
-        param = ", ".join(
-            # [overall, anger, disgust, fear, joy, neutral, sadness, surprise]
-            [overall, anger, disgust, joy]
+        pca = PCAEncodedReviewEmotionsView.pca
+        if pca is None:
+            PCAEncodedReviewEmotionsView.update_pca()
+            pca = PCAEncodedReviewEmotionsView.pca
+        vector = pca.transform(
+            [overall, anger, disgust, fear, joy, neutral, sadness, surprise]
+        )
+        sql = f"""
+        WITH top_k as (
+            SELECT 1 as id, a.asin, a.reviewerID FROM (
+                SELECT review_emotion, ST_MakePoint(vec_d1, vec_d2, vec_d3, vec_d4) as vect
+                FROM app_pcaencodedreviewemotionsmodel
+                ORDER BY asin
+            ) as a
+            ORDER BY a.vect <-> ST_MakePoint({", ".join(vector)})
+            LIMIT %s
         )
 
-        sql = f"""
-        SELECT 1 as id, a.asin FROM (
-            SELECT asin, ST_MakePoint(overall, anger, disgust, joy) as vect
-            FROM app_reviewemotionsmodel
-            ORDER BY asin
-        ) as a
-        ORDER BY a.vect <-> ST_MakePoint({param})
-        LIMIT %s;
+        SELECT 1 as id, a.reviewerID, a.asin
+        FROM app_reviewemotionsmodel as a
+        WHERE a.asin = top_k.asin and a.reviewerID = top_k.reviewerID;
         """
         objs = ReviewEmotionsModel.objects.raw(sql, params=[k])
         return ApiResponse(success=True, code=200, data=[obj.asin for obj in objs])
@@ -351,6 +349,7 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
         ----------
         body: `Dict`
             - asin: str
+            - reviewerID: str
             - overall: float
             - anger: float
             - disgust: float
@@ -369,22 +368,72 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
         """
 
         data = json.loads(request.data)
+        print(data)
 
-        message = "exists"
         if (
-            not ReviewEmotionsModel.objects.filter(asin=data["asin"])
-            .filter(**data)
+            ReviewEmotionsModel.objects.filter(reviewerID=data["reviewerID"])
+            .filter(asin=data["asin"])
             .exists()
         ):
-            ReviewEmotionsModel.objects.create(**data)
-            message = "created"
-
-        return ApiResponse(success=True, code=201, data=message)
+            return ApiResponse(success=True, code=200, data="exists")
+        ReviewEmotionsModel.objects.create(**data)
+        return ApiResponse(success=True, code=201, data="created")
 
 
 class PCAEncodedReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
-    """Endpoint for PCA (4) encoded Review Emotions
-    TODO: https://builtin.com/machine-learning/pca-in-python
-    """
+    """Endpoint for PCA(n_components=4) encoded Review Emotions"""
 
-    pass
+    pca = None
+
+    def get(self, request, *args, **kwargs):
+        data = request.data
+        if self.pca is None:
+            PCAEncodedReviewEmotionsView.update_pca()
+            self.pca = PCAEncodedReviewEmotionsView.pca
+        return ApiResponse(
+            success=True,
+            code=200,
+            data=pd.DataFrame(self.pca.transform(data)).to_json(),
+        )
+
+    def update(self, request, *args, **kwargs):
+        PCAEncodedReviewEmotionsView.update_pca()
+        return ApiResponse(success=True, code=200, data="")
+
+    @classmethod
+    def update_pca(cls):
+        from sklearn.decomposition import PCA
+        from django.db import connection
+
+        pca = cls.pca if cls.pca is not None else PCA(n_components=4)
+
+        dimensions = [
+            "overall",
+            "anger",
+            "disgust",
+            "fear",
+            "joy",
+            "neutral",
+            "sadness",
+            "surprise",
+        ]
+        table = pd.read_sql_table(
+            "app_reviewemotionsmodel",
+            connection,
+            columns=["asin", "reviewerID", *dimensions],
+        )
+        subset = table[dimensions]
+        table.drop(dimensions, inplace=True, axis=1)
+
+        cls.pca = pca.fit(subset)
+        df = pd.DataFrame(
+            data=cls.pca.transform(subset),
+            columns=["vec_d1", "vec_d2", "vec_d3", "vec_d4"],
+        )
+        results = table.join(df)
+        df.drop(df.columns, inplace=True)
+        table.drop(table.columns, inplace=True, axis=1)
+
+        PCAEncodedReviewEmotionsModel.objects.bulk_update(
+            [PCAEncodedReviewEmotionsModel(*data) for _, *data in results.itertuples()]
+        )

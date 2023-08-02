@@ -12,6 +12,7 @@ BATCH_FILES = [filename for filename in os.listdir(BATCH_DIR) if ".json.gz" in f
 BACKEND_SERVER = f"{os.getenv('BACKEND_HOST', 'http://localhost')}:{os.getenv('BACKEND_PORT', '4595')}"
 
 amzn_reviews = [
+    "asin",
     "overall",
     "reviewText",
     "reviewerID",
@@ -44,6 +45,8 @@ amzn_metadata = [
 async def parse_and_send(partition: str, endpoint: str, cols: List[str]):
     start_partition = time.time()
     df = json_gz_to_df(f"{BATCH_DIR}/{partition}")
+    if "asin" not in df.columns:
+        return
     df.drop(columns=df.columns.difference(cols), inplace=True)
     payload = df.to_json()
     print(f"time to prepare payload: {time.time() - start_partition}")
@@ -100,5 +103,5 @@ def stream_to_endpoint():
 
 # get_amzn_reviews(amzn_metadata)
 # get_amzn_reviews(amzn_reviews, metadata=False)
-asyncio.run(post_to_endpoint(metadata=True))
+asyncio.run(post_to_endpoint(metadata=False))
 # stream_to_endpoint()

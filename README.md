@@ -12,7 +12,7 @@ a killer solution
 - db
   - Postgres database (datalake)
 
-![Architecture](./architecture.png)
+![Architecture](./images/architecture.png)
 ---
 |Technology|Pros|Cons|
 |----------|----|----|
@@ -25,7 +25,7 @@ a killer solution
 
 PS: if we trully wanted to scale we'd directly upload to a cloud provider and do stream and batch processing with Spark (orchestrated with Ariflow most probably) on top of a columnar DataBase
 
-![DB_SCHEMA](./db_schema.png)
+![DB_SCHEMA](./images/db_schema.png)
 
 ## Alternatives we looked at
 - https://github.com/pgvector/pgvector
@@ -34,3 +34,37 @@ PS: if we trully wanted to scale we'd directly upload to a cloud provider and do
 - https://pypi.org/project/beam-postgres/
 - https://www.psycopg.org/docs/
 
+
+# Performance:
+Machine specs: 
+  - Intel® Core™ i7-7700HQ CPU @2.80GHz,  8 threads
+  - 32GB RAM @2667 MT/s, 1.2V
+Resources for docker QUEMU VM
+![](./images/resouce_alloc_docker.png)
+Idle resource utilization
+![](./images/idle_backend.png)
+---
+During streaming of amazon_metadata
+- /server/backend 
+![](./images/metadata_etl.png)
+![](./images/metadata_docker.png)
+- /server/backend/data/streamer.py
+![](./images/metadata_etl_client.png)
+![](./images/metadata_processes.png)
+- Overall:
+![](./images/metadata_cpu.png)
+---
+During streaming of amazon_reviews
+- /server/backend 
+![]()
+- /server/backend/data/streamer.py
+![]()
+---
+During streaming of emotion analysis of reviews
+- /server/backend 
+![](./images/streaming_review_emotions.png)
+- /server/notebooks/nlp/emotions_classifier.py
+![](./images/nlp_streaming_review_emotions.png)
+
+Time: ~ 110-140 ms per entry
+---

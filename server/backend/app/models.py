@@ -27,9 +27,9 @@ class AmazonReviewModel(APIModelStructure, models.Model):
     asin = models.CharField(
         max_length=255, unique=False, null=False, blank=False, db_index=True
     )
-    overall = models.FloatField(null=False, blank=False)
+    overall = models.FloatField(null=True, blank=False)
     reviewText = models.TextField(null=False, blank=True)
-    reviewerID = models.CharField(max_length=255, unique=True, null=False, blank=False)
+    reviewerID = models.CharField(max_length=255, unique=False, null=False, blank=False)
     reviewerName = models.CharField(max_length=255, null=False, blank=False)
     summary = models.TextField(null=False, blank=True)
     unixReviewTime = models.PositiveBigIntegerField(null=False, blank=False)
@@ -43,6 +43,9 @@ class ReviewEmotionsModel(APIModelStructure, models.Model):
     asin = models.CharField(
         max_length=255, unique=False, null=False, blank=False, db_index=True
     )
+    reviewerID = models.CharField(
+        max_length=255, unique=False, null=False, blank=False, db_index=True
+    )
     overall = models.FloatField(null=False, blank=False)
     anger = models.FloatField(null=False, blank=False)
     disgust = models.FloatField(null=False, blank=False)
@@ -51,3 +54,16 @@ class ReviewEmotionsModel(APIModelStructure, models.Model):
     neutral = models.FloatField(null=False, blank=False)
     sadness = models.FloatField(null=False, blank=False)
     surprise = models.FloatField(null=False, blank=False)
+
+
+class PCAEncodedReviewEmotionsModel(APIModelStructure, models.Model):
+    asin = models.CharField(
+        max_length=255, unique=False, null=False, blank=False, db_index=True
+    )
+    reviewerID = models.CharField(
+        max_length=255, unique=False, null=False, blank=False, db_index=True
+    )
+    vec_d1 = models.FloatField(null=False, blank=False)
+    vec_d2 = models.FloatField(null=False, blank=False)
+    vec_d3 = models.FloatField(null=False, blank=False)
+    vec_d4 = models.FloatField(null=False, blank=False)
