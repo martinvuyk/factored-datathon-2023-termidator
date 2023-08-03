@@ -28,7 +28,7 @@ def force_try(x, *fns):
 
 
 def im_sick_of_this_dataset(x):
-    is_nan_float = lambda x: np.isnan(x) or isinstance(x, float) or x == 0
+    is_nan_float = lambda x: np.isnan(x) or isinstance(x, float) or isinstance(x, int)
     is_nan_string = lambda x: x.lower() == "nan" or x.lower() == "null"
     is_inf_string = (
         lambda x: x.lower() == "inf"
@@ -74,11 +74,13 @@ def clean(df: pd.DataFrame):
     if "summary" not in df.columns:
         df["summary"] = ""
 
+    is_filth_string = lambda x: "" if is_filth(x) else x
+    replace_nul = lambda x: x.replace("\x00", "") if not isinstance(x, int) else ""
     df["verified"] = (
         df["verified"].fillna(0).apply(lambda x: False if is_filth(x) else bool(x))
     )
-    df["summary"] = df["summary"].fillna(0).apply(lambda x: "" if is_filth(x) else x)
-    df["image"] = df["image"].fillna(0).apply(lambda x: "" if is_filth(x) else x)
-    df["style"] = df["style"].fillna(0).apply(lambda x: "" if is_filth(x) else x)
+    df["summary"] = df["summary"].fillna(0).apply(is_filth_string).apply(replace_nul)
+    df["image"] = df["image"].fillna(0).apply(is_filth_string).apply(replace_nul)
+    df["style"] = df["style"].fillna(0).apply(is_filth_string).apply(replace_nul)
     df["vote"] = df["vote"].apply(filter_int).fillna(0)
     return df
