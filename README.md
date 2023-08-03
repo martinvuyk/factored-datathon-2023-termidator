@@ -36,13 +36,17 @@ PS: if we trully wanted to scale we'd directly upload to a cloud provider and do
 
 
 # Performance:
-Machine specs: 
+- Machine specs: 
   - Intel® Core™ i7-7700HQ CPU @2.80GHz,  8 threads
   - 32GB RAM @2667 MT/s, 1.2V
-Resources for docker QUEMU VM
-![](./images/resouce_alloc_docker.png)
-Idle resource utilization
+- Resources for docker QUEMU VM
+  - 6 threads
+  - 16GB RAM
+  - 1,5GB Swap
+  - 96GB Disk
+- Idle resource utilization
 ![](./images/idle_backend.png)
+
 ---
 During streaming of amazon_metadata
 - /server/backend 
@@ -53,12 +57,16 @@ During streaming of amazon_metadata
 ![](./images/metadata_processes.png)
 - Overall:
 ![](./images/metadata_cpu.png)
+
 ---
 During streaming of amazon_reviews
 - /server/backend 
-![]()
+![](./images/review_backend.png)
 - /server/backend/data/streamer.py
-![]()
+![](./images/review_client.png)
+
+for 55826 entries
+
 ---
 During streaming of emotion analysis of reviews
 - /server/backend 
@@ -67,4 +75,5 @@ During streaming of emotion analysis of reviews
 ![](./images/nlp_streaming_review_emotions.png)
 
 Time: ~ 110-140 ms per entry
+
 ---

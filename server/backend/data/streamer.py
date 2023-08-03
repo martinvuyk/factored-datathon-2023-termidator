@@ -13,9 +13,9 @@ BACKEND_SERVER = f"{os.getenv('BACKEND_HOST', 'http://localhost')}:{os.getenv('B
 
 amzn_reviews = [
     "asin",
+    "reviewerID",
     "overall",
     "reviewText",
-    "reviewerID",
     "reviewerName",
     "summary",
     "unixReviewTime",
@@ -46,6 +46,12 @@ async def parse_and_send(partition: str, endpoint: str, cols: List[str]):
     start_partition = time.time()
     df = json_gz_to_df(f"{BATCH_DIR}/{partition}")
     if "asin" not in df.columns:
+        return
+    if endpoint == "amazon_review" and (
+        "reviewerID" not in df.columns
+        or "overall" not in df.columns
+        or "reviewText" not in df.columns
+    ):
         return
     df.drop(columns=df.columns.difference(cols), inplace=True)
     payload = df.to_json()

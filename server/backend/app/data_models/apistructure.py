@@ -59,8 +59,10 @@ class ApiViewMetaClass(type):
                         raise Exception(str(e), 500)
                     raise
             except Exception as e:
-                print(traceback.print_exc())
-                response = ApiResponse(success=False, code=e.args[1], error=e.args[0])
+                # traceback.print_exc()
+                response = ApiResponse(
+                    success=False, code=e.args[1], error=e.args[0][:255]
+                )
             finally:
                 print(response)
                 return JsonResponse(asdict(response), status=response.code)

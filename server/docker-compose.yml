@@ -42,7 +42,7 @@ services:
       POSTGRES_USER: ${SQL_USER:-user}
       POSTGRES_PASSWORD: ${SQL_PASSWORD:-password}
       POSTGRES_DB: ${SQL_DATABASE:-postgres}
-      # for connecting outside the local docker-compose network namespace
+      # for connecting outside the local docker-compose network namespace (like w/ dbeaver)
       # update /var/lib/postgresql/data/pg_hba.conf adding a line: 
       # host all all {BACKEND_HOST} trust
     volumes:

@@ -27,11 +27,11 @@ class AmazonReviewModel(APIModelStructure, models.Model):
     asin = models.CharField(
         max_length=255, unique=False, null=False, blank=False, db_index=True
     )
-    overall = models.FloatField(null=True, blank=False)
-    reviewText = models.TextField(null=False, blank=True)
+    overall = models.PositiveSmallIntegerField(null=False, blank=False)
+    reviewText = models.TextField(null=False, blank=True, default="")
     reviewerID = models.CharField(max_length=255, unique=False, null=False, blank=False)
     reviewerName = models.CharField(max_length=255, null=False, blank=False)
-    summary = models.TextField(null=False, blank=True)
+    summary = models.TextField(null=False, blank=True, default="")
     unixReviewTime = models.PositiveBigIntegerField(null=False, blank=False)
     verified = models.BooleanField(default=False)
     style = models.JSONField(null=True, blank=True)

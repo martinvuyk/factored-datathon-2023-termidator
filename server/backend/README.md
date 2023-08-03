@@ -1,6 +1,6 @@
 # Endpoints
 - API
-  - base_url/api/v1/something
+  - base_url/api/v1/
 - Documentation
   - base_url/api/v1/docs/swagger
 - DB Admin interface
