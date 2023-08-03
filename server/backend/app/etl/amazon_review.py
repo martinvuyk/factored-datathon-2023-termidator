@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime
 import numpy as np
+from app.etl.amazon_metadata import filter_int
 
 cols = [
     "asin",
@@ -72,5 +73,5 @@ def clean(df: pd.DataFrame):
     df["summary"] = df["summary"].fillna(0).apply(lambda x: "" if is_filth(x) else x)
     df["image"] = df["image"].fillna(0).apply(lambda x: "" if is_filth(x) else x)
     df["style"] = df["style"].fillna(0).apply(lambda x: "" if is_filth(x) else x)
-    df["vote"] = df["vote"].fillna(0).apply(lambda x: 0 if is_filth(x) else x)
+    df["vote"] = df["vote"].apply(filter_int).fillna(0)
     return df

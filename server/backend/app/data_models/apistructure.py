@@ -59,7 +59,7 @@ class ApiViewMetaClass(type):
                         raise Exception(str(e), 500)
                     raise
             except Exception as e:
-                # traceback.print_exc()
+                traceback.print_exc()
                 response = ApiResponse(
                     success=False, code=e.args[1], error=e.args[0][:255]
                 )

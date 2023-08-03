@@ -48,9 +48,14 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
         parsed = time.time()
         print(f"parsing took: {parsed - start_request}")
         df = amazon_metadata.clean(df)
+        if df.empty:
+            raise Exception("bad_data", 400)
         cleaning = time.time()
         print(f"cleaning took: {cleaning - parsed}")
-        entries = [AmazonMetadataModel(*row) for _, *row in df.itertuples()]
+        entries = [
+            AmazonMetadataModel(**{col: val for col, val in zip(df.columns, row)})
+            for _, *row in df.itertuples()
+        ]
         creating = time.time()
         print(f"creating took: {creating - cleaning}")
         AmazonMetadataModel.objects.bulk_create(entries, ignore_conflicts=True)
