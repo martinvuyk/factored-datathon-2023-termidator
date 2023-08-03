@@ -58,7 +58,7 @@ During streaming of amazon_metadata
 - Overall:
 ![](./images/metadata_cpu.png)
 
-(when entries already exist in DB)
+(most of the payload goes straight to the garbage)
 
 ---
 During streaming of amazon_reviews

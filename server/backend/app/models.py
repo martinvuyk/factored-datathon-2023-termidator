@@ -38,6 +38,9 @@ class AmazonReviewModel(APIModelStructure, models.Model):
     vote = models.PositiveSmallIntegerField(null=True, blank=True)
     image = models.JSONField(null=True, blank=True)
 
+    class Meta:
+        unique_together = ("asin", "reviewerID")
+
 
 class ReviewEmotionsModel(APIModelStructure, models.Model):
     asin = models.CharField(
@@ -55,6 +58,9 @@ class ReviewEmotionsModel(APIModelStructure, models.Model):
     sadness = models.FloatField(null=False, blank=False)
     surprise = models.FloatField(null=False, blank=False)
 
+    class Meta:
+        unique_together = ("asin", "reviewerID")
+
 
 class PCAEncodedReviewEmotionsModel(APIModelStructure, models.Model):
     asin = models.CharField(
@@ -67,3 +73,6 @@ class PCAEncodedReviewEmotionsModel(APIModelStructure, models.Model):
     vec_d2 = models.FloatField(null=False, blank=False)
     vec_d3 = models.FloatField(null=False, blank=False)
     vec_d4 = models.FloatField(null=False, blank=False)
+
+    class Meta:
+        unique_together = ("asin", "reviewerID")

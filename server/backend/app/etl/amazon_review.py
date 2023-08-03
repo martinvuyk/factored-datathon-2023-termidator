@@ -43,13 +43,20 @@ def im_sick_of_this_dataset(x):
 def clean(df: pd.DataFrame):
     df.drop_duplicates(subset=["asin", "reviewerID"], inplace=True)
     df.drop(columns=df.columns.difference(cols), inplace=True)
-
+    if df.empty:
+        return df
     is_filth = im_sick_of_this_dataset
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(subset=must, how="any", inplace=True)
     for col in must:
         df[col] = df[col].apply(lambda x: None if is_filth(x) else x)
         df.dropna(subset=[col], inplace=True)
+
+    # yeah.. so sometimes one of these comes with more than 255 chars for some reason
+    df["asin"] = df["asin"].apply(lambda x: None if len(x) > 255 else x)
+    df["reviewerID"] = df["reviewerID"].apply(lambda x: None if len(x) > 255 else x)
+    df["reviewerName"] = df["reviewerName"].apply(lambda x: None if len(x) > 255 else x)
+    df.dropna(subset=["reviewerID", "reviewerName", "asin"], how="any", inplace=True)
 
     if "unixReviewTime" in df.columns:
         df["unixReviewTime"] = df["unixReviewTime"].fillna(
