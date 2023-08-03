@@ -28,7 +28,8 @@ def force_try(x, *fns):
 
 
 def im_sick_of_this_dataset(x):
-    is_nan_float = lambda x: np.isnan(x) or isinstance(x, float) or isinstance(x, int)
+    """This is ridiculous"""
+    is_nan_float = lambda x: np.isnan(x) or isinstance(x, float) or x == 0
     is_nan_string = lambda x: x.lower() == "nan" or x.lower() == "null"
     is_inf_string = (
         lambda x: x.lower() == "inf"
@@ -48,15 +49,21 @@ def clean(df: pd.DataFrame):
     is_filth = im_sick_of_this_dataset
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(subset=must, how="any", inplace=True)
-    for col in must:
-        df[col] = df[col].apply(lambda x: None if is_filth(x) else x)
-        df.dropna(subset=[col], inplace=True)
 
     # yeah.. so sometimes one of these comes with more than 255 chars for some reason
-    df["asin"] = df["asin"].apply(lambda x: None if len(x) > 255 else x)
-    df["reviewerID"] = df["reviewerID"].apply(lambda x: None if len(x) > 255 else x)
-    df["reviewerName"] = df["reviewerName"].apply(lambda x: None if len(x) > 255 else x)
-    df.dropna(subset=["reviewerID", "reviewerName", "asin"], how="any", inplace=True)
+    longer_255 = lambda x: None if len(x) > 255 else x
+
+    # and some stuff is just plain contaminated
+    def replace_nul(item=""):
+        return lambda x: x.replace("\x00", "") if isinstance(x, str) else item
+
+    for col in must:
+        if col not in ["reviewText", "overall"]:
+            df[col] = df[col].apply(longer_255)
+        df[col] = df[col].apply(lambda x: None if is_filth(x) else x)
+        if col != "overall":
+            df[col] = df[col].apply(replace_nul(None))
+        df.dropna(subset=[col], how="any", inplace=True)
 
     if "unixReviewTime" in df.columns:
         df["unixReviewTime"] = df["unixReviewTime"].fillna(
@@ -75,12 +82,11 @@ def clean(df: pd.DataFrame):
         df["summary"] = ""
 
     is_filth_string = lambda x: "" if is_filth(x) else x
-    replace_nul = lambda x: x.replace("\x00", "") if not isinstance(x, int) else ""
     df["verified"] = (
         df["verified"].fillna(0).apply(lambda x: False if is_filth(x) else bool(x))
     )
-    df["summary"] = df["summary"].fillna(0).apply(is_filth_string).apply(replace_nul)
-    df["image"] = df["image"].fillna(0).apply(is_filth_string).apply(replace_nul)
-    df["style"] = df["style"].fillna(0).apply(is_filth_string).apply(replace_nul)
+    df["summary"] = df["summary"].fillna(0).apply(is_filth_string).apply(replace_nul())
+    df["image"] = df["image"].fillna(0).apply(is_filth_string).apply(replace_nul())
+    df["style"] = df["style"].fillna(0).apply(is_filth_string).apply(replace_nul())
     df["vote"] = df["vote"].apply(filter_int).fillna(0)
     return df
