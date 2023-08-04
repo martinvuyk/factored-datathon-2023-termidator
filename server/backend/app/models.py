@@ -17,7 +17,7 @@ class AmazonMetadataModel(APIModelStructure, models.Model):
     details = models.TextField(null=True, blank=True)
     feature = models.JSONField()
     image = models.JSONField()
-    main_cat = models.CharField(max_length=255, null=False, blank=False)
+    main_cat = models.CharField(max_length=255, null=False, blank=False, db_index=True)
     price = models.IntegerField(null=True, blank=True)
     rank = models.IntegerField(null=True, blank=True)
     title = models.CharField(max_length=255, null=False, blank=False)

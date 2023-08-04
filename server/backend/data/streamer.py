@@ -73,7 +73,7 @@ async def post_to_endpoint(metadata=True):
         partitions = [filename for filename in BATCH_FILES if "review" in filename]
         cols = amzn_reviews
     start = time.time()
-    for partition in partitions:
+    for partition in partitions[4000:].reverse():
         asyncio.create_task(parse_and_send(partition, endpoint, cols))
     await asyncio.wait(asyncio.all_tasks())
     print(f"total time elapsed: {time.time() - start}")

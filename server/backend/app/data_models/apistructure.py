@@ -5,6 +5,10 @@ from typing import Any, Callable, Iterator, Dict, Optional
 from rest_framework.views import APIView
 from django.http import JsonResponse
 import traceback
+import os
+import logging
+
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper())
 
 
 class APIModelStructure:
@@ -59,12 +63,13 @@ class ApiViewMetaClass(type):
                         raise Exception(str(e), 500)
                     raise
             except Exception as e:
-                traceback.print_exc()
+                if logging._Level == logging.DEBUG:
+                    traceback.print_exc()
                 response = ApiResponse(
                     success=False, code=e.args[1], error=e.args[0][:255]
                 )
             finally:
-                print(response)
+                logging.debug(str(response)[:255])
                 return JsonResponse(asdict(response), status=response.code)
 
         # Get back the docstrings

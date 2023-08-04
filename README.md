@@ -39,43 +39,57 @@ PS: if we trully wanted to scale we'd directly upload to a cloud provider and do
 - Machine specs: 
   - Intel® Core™ i7-7700HQ CPU @2.80GHz,  8 threads
   - 32GB RAM @2667 MT/s, 1.2V
-- Resources for docker QUEMU VM
+- Resources for docker QEMU VM
   - 6 threads
   - 16GB RAM
   - 1,5GB Swap
-  - 96GB Disk
-- Idle resource utilization
+  - 200GB Disk
+- Idle resource utilization (100% CPU means 1 thread)
 ![](./images/idle_backend.png)
 
 ---
 During streaming of amazon_metadata
-- /server/backend 
-![](./images/metadata_etl.png)
-![](./images/metadata_docker.png)
-- /server/backend/data/streamer.py
-![](./images/metadata_etl_client.png)
-![](./images/metadata_processes.png)
-- Overall:
-![](./images/metadata_cpu.png)
+- Time
+  - /server/backend 
+  ![](./images/metadata_etl.png)
+  - /server/backend/data/streamer.py
+  ![](./images/metadata_etl_client.png)
+- Resources
+  - /server/backend 
+  ![](./images/metadata_docker.png)
+  - /server/backend/data/streamer.py
+  ![](./images/metadata_processes.png)
+  - Overall:
+  ![](./images/metadata_cpu.png)
 
 (most of the payload goes straight to the garbage)
 
 ---
 During streaming of amazon_reviews
-- /server/backend 
-![](./images/review_backend.png)
-- /server/backend/data/streamer.py
-![](./images/review_client.png)
-
-for 55826 entries
+- Time for 55826 entries
+  - /server/backend 
+  ![](./images/review_backend.png)
+  - /server/backend/data/streamer.py
+  ![](./images/review_client.png)
+- Resources
+  - /server/backend
+  ![](./images/review_backend_resource.png)
+  - /server/backend/data/streamer.py
+  ![](./images/review_client_resource.png)
+  - Overall
+  ![](./images/review_overall_resource.png)
 
 ---
 During streaming of emotion analysis of reviews
-- /server/backend 
-![](./images/streaming_review_emotions.png)
-- /server/notebooks/nlp/emotions_classifier.py
-![](./images/nlp_streaming_review_emotions.png)
+- Time: 
+  - ~ 10 ms per entry or even less, couldn't measure properly because of asyncio
+- Resources
+  - /server/backend 
+  ![](./images/emotions_streaming_server.png)
+  - /server/notebooks/nlp/emotions_classifier.py
+  ![](./images/emotions_streaming_client.png)
+  - Overall:
+  ![](./images/emotions_streaming_overall.png)
 
-Time: ~ 110-140 ms per entry
 
 ---

@@ -6,6 +6,9 @@ import json
 from typing import TypedDict, List
 import random
 import time
+import logging
+
+logging.basicConfig(level="INFO")
 
 BACKEND_SERVER = f"{os.getenv('BACKEND_HOST', 'http://localhost')}:{os.getenv('BACKEND_PORT', '4595')}"
 
@@ -27,7 +30,7 @@ def get_knn_from_single_random_review():
     ).json()["data"]
 
     review_asin_id = random.choice(review_ids)
-
+    # TODO: have to store this as json cause waiting 1 minute for a list just to take 1 is dumb
     review = requests.get(
         f"{BACKEND_SERVER}/api/v1/amazon_review", params={"asin": review_asin_id}
     ).json()["data"][0]
@@ -40,12 +43,11 @@ def get_knn_from_single_random_review():
         f"{BACKEND_SERVER}/api/v1/review_emotions",
         params={"k": 5, **result},
     )
-    print(resp.json())
+    logging.info(resp.json())
 
 
 async def post_result(classifier, asin: str):
     batch_start = time.time()
-
     server_data = requests.get(
         f"{BACKEND_SERVER}/api/v1/amazon_review", params={"asin": asin}
     ).json()["data"]
@@ -64,8 +66,8 @@ async def post_result(classifier, asin: str):
             f"{BACKEND_SERVER}/api/v1/review_emotions",
             json=json.dumps(result),
         )
-        print(resp.json())
-    print(f"batch_time: {time.time() - batch_start}")
+        logging.info(resp.json())
+    logging.info(f"batch_time: {asin} -> {time.time() - batch_start}")
 
 
 async def main():
@@ -76,14 +78,23 @@ async def main():
         top_k=7,
     )
     """https://huggingface.co/j-hartmann/emotion-english-distilroberta-base"""
-    review_ids = requests.get(
+    reviews = requests.get(
         f"{BACKEND_SERVER}/api/v1/amazon_review", params={"asin": None}
     ).json()["data"]
-    for review_id in review_ids:
-        asyncio.create_task(post_result(classifier, review_id))
+    logging.info(f"got reviews: {len(reviews)}")
+    for review in reviews:
+        asyncio.create_task(post_result(classifier, review["asin"]))
 
-    await asyncio.wait(asyncio.all_tasks())
-    print(f"total time elapsed: {time.time() - start}")  # doesn't work... why
+        if len(asyncio.all_tasks()) - 1 > 16:
+            # wait for the first 4 tasks that were triggered
+            all_tasks = asyncio.all_tasks()
+            all_tasks.remove(asyncio.current_task())
+            await asyncio.wait(list(all_tasks)[:4])
+
+    all_tasks = asyncio.all_tasks()
+    all_tasks.remove(asyncio.current_task())
+    await asyncio.wait(all_tasks)
+    logging.info(f"total time elapsed: {time.time() - start}")
 
 
 if __name__ == "__main__":
