@@ -103,3 +103,7 @@ Fetching closest (knn) review to the average for that asin
   ![](./images/pca_backend.png)
   - /server/notebooks/utils.py
   ![](./images/pca_client.png)
+
+---
+DB contents:
+![](./images/db_contents.png)
