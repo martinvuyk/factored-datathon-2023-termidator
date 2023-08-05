@@ -1,5 +1,5 @@
 """
-Endpoints REST
+REST Endpoints
 """
 from app.data_models.apistructure import APIViewStructure, ApiResponse, ApiViewMetaClass
 from app.models import *
@@ -16,7 +16,7 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
     """Endpoint for Amazon Metadata"""
 
     def get(self, request, *args, **kwargs):
-        """Returns asin of all reviews for given main_cat, if main_cat is None ->  all asin in db
+        """Returns asin of all reviews for given main_cat, if main_cat is None -> all asin in db
 
         Parameters
         ----------
@@ -97,6 +97,8 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
 
 
 class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
+    """Endpoint for Amazon Reviews"""
+
     def get(self, request, *args, **kwargs):
         """Returns all reviews for given asin
 
@@ -203,30 +205,41 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
             - success: ``True``
             - data: `List[Dict]`
             - code: 200
+
+        Notes
+        -----
+        1. Get 50 product reviews
+            - where main_cat is as specified
+            - have rating >= 3 stars
+            - order by the amount of reviews "emotionally pre-processed"
+        2. Order those reviews, get top 20
+            1. order by rounding the rating (4.5+ -> 5, [3.5, 4.5] -> 4, etc.) desc
+            2. order by the avg amount of joy desc
         """
         main_cat = request.query_params.get("main_cat")
         if main_cat is None:
             raise Exception("bad_data", 400)
 
         query = """
-        select 	1 as id, row_number() over (order by joy desc) as place, * from(
-        select *
-        from
-        (select 
-            asin, 
-            count(*) as amount,
-            sum(overall)/count(*) as overall, 
-            sum(anger)/count(*) as anger, 
-            sum(disgust)/count(*) as disgust, 
-            sum(fear)/count(*) as fear, 
-            sum(joy)/count(*) as joy,
-            sum(neutral)/count(*) as neutral,
-            sum(sadness)/count(*) as sadness,
-            sum(surprise)/count(*) as surprise
-        from app_reviewemotionsmodel ar 
-        where asin in (select asin from app_amazonmetadatamodel aa where aa.main_cat = %s) and overall >= 3
-        group by asin order by amount desc
-        limit 50) aa
+        select 	1 as id, row_number() over (partition by 1) as place, * from(
+        select * from (
+            select 
+                asin, 
+                count(*) as amount,
+                sum(overall)/count(*) as overall, 
+                sum(anger)/count(*) as anger, 
+                sum(disgust)/count(*) as disgust, 
+                sum(fear)/count(*) as fear, 
+                sum(joy)/count(*) as joy,
+                sum(neutral)/count(*) as neutral,
+                sum(sadness)/count(*) as sadness,
+                sum(surprise)/count(*) as surprise
+            from app_reviewemotionsmodel ar 
+            where asin in (select asin from app_amazonmetadatamodel aa where aa.main_cat = %s) 
+                and overall >= 3
+            group by asin order by amount desc
+            limit 50
+        ) aa
         order by round(overall) desc, joy desc
         limit 20) bb
         """
@@ -386,8 +399,8 @@ class PCAEncodedReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass)
             for _, *data in results.itertuples()
         ]
         end_build = time.time()
-
         logging.debug(f"building entries took: {end_build - end_pca_transf}")
+
         PCAEncodedReviewEmotionsModel.objects.bulk_create(
             entries, update_conflicts=True, unique_fields=["id"], update_fields=vecs
         )
