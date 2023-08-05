@@ -45,22 +45,28 @@ PS: if we trully wanted to scale we'd directly upload to a cloud provider and do
   - 1,5GB Swap
   - 200GB Disk
 - Idle resource utilization (100% CPU means 1 thread)
-  - ![](./images/idle_backend.png)
+
+  ![](./images/idle_backend.png)
 
 ---
 During streaming of amazon_metadata
 - Time (seconds)
   - /server/backend 
-    - ![](./images/metadata_etl.png)
+
+    ![](./images/metadata_etl.png)
   - /server/backend/data/streamer.py
-    - ![](./images/metadata_etl_client.png)
+
+    ![](./images/metadata_etl_client.png)
 - Resources
   - /server/backend 
-    - ![](./images/metadata_docker.png)
+
+    ![](./images/metadata_docker.png)
   - /server/backend/data/streamer.py
-    - ![](./images/metadata_processes.png)
+
+    ![](./images/metadata_processes.png)
   - Overall:
-    - ![](./images/metadata_cpu.png)
+
+    ![](./images/metadata_cpu.png)
 
 (most of the payload goes straight to the garbage)
 
@@ -68,16 +74,21 @@ During streaming of amazon_metadata
 During streaming of amazon_reviews
 - Time (seconds) for 55826 entries 
   - /server/backend 
-    - ![](./images/review_backend.png)
+
+    ![](./images/review_backend.png)
   - /server/backend/data/streamer.py
-    - ![](./images/review_client.png)
+
+    ![](./images/review_client.png)
 - Resources
   - /server/backend
-    - ![](./images/review_backend_resource.png)
+
+    ![](./images/review_backend_resource.png)
   - /server/backend/data/streamer.py
-    - ![](./images/review_client_resource.png)
+
+    ![](./images/review_client_resource.png)
   - Overall
-    - ![](./images/review_overall_resource.png)
+
+    ![](./images/review_overall_resource.png)
 
 ---
 During streaming of emotion analysis of reviews
@@ -85,11 +96,14 @@ During streaming of emotion analysis of reviews
   - ~ 10 ms per entry or even less, couldn't measure properly because of asyncio
 - Resources
   - /server/backend 
-    - ![](./images/emotions_streaming_server.png)
+
+    ![](./images/emotions_streaming_server.png)
   - /server/notebooks/nlp/emotions_classifier.py
-    - ![](./images/emotions_streaming_client.png)
+
+    ![](./images/emotions_streaming_client.png)
   - Overall:
-    - ![](./images/emotions_streaming_overall.png)
+
+    ![](./images/emotions_streaming_overall.png)
 
 
 ---
@@ -100,10 +114,13 @@ During updating of PCA embeddings for review emotions
 Fetching closest (knn) review to the average for that asin
 - Time for an asin with 2562 reviews processed
   - /server/backend 
-    - ![](./images/pca_backend.png)
+
+    ![](./images/pca_backend.png)
   - /server/notebooks/utils.py
-    - ![](./images/pca_client.png)
+  
+    ![](./images/pca_client.png)
 
 ---
-DB contents:
-  - ![](./images/db_contents.png)
+- DB contents:
+
+![](./images/db_contents.png)
