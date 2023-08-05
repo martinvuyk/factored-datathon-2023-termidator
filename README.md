@@ -1,7 +1,7 @@
-# TermiDator
-a killer solution
+# <u>***TermiDator***</u>
+#### *a killer solution*
 
-## Style Guide
+### Style Guide
 - Black formatter
 
 ## Architecture
