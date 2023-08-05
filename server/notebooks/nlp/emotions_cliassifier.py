@@ -67,6 +67,13 @@ async def post_result(classifier, asin: str):
             json=json.dumps(result),
         )
         logging.info(resp.json())
+        # there is a memory leak somewhere, it just keeps getting bigger
+        review_text = None
+        results = None
+        data = None
+        result = None
+        resp = None
+    server_data = None
     logging.info(f"batch_time: {asin} -> {time.time() - batch_start}")
 
 
@@ -78,12 +85,14 @@ async def main():
         top_k=7,
     )
     """https://huggingface.co/j-hartmann/emotion-english-distilroberta-base"""
-    reviews = requests.get(
-        f"{BACKEND_SERVER}/api/v1/amazon_review", params={"asin": None}
+    products = requests.get(
+        f"{BACKEND_SERVER}/api/v1/amazon_metadata",
+        # look at ./top_products.png, most "emotional" category that has most products
+        params={"main_cat": "Toys & Games"},
     ).json()["data"]
-    logging.info(f"got reviews: {len(reviews)}")
-    for review in reviews:
-        asyncio.create_task(post_result(classifier, review["asin"]))
+    logging.info(f"got reviews: {len(products)}")
+    for product in products:
+        asyncio.create_task(post_result(classifier, product["asin"]))
 
         if len(asyncio.all_tasks()) - 1 > 16:
             # wait for the first 4 tasks that were triggered

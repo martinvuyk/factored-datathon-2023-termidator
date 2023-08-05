@@ -17,13 +17,13 @@ a killer solution
 |Technology|Pros|Cons|
 |----------|----|----|
 |Postgres|on-prem: platform independent|it's an OLTP databse, not OLAP because it's a row DB|
-|Python|Easy to program and understand|slow, interpreted, huge Heap allocation|
+|Python|Easy to code and understand|slow, interpreted, huge Heap allocation|
 |Django|Easy DB Model building and migration|It's ORM is not designed for DataStreaming nor DWH building, performance is lacking|
 |Jupyter Notebooks|Ease of use, Open Source, easy to integrate|Not the most professional data visualization|
 |PostGIS|Easy plug and play extension for Postgres|Supports up to 4D vectors|
 
 
-PS: if we trully wanted to scale we'd directly upload to a cloud provider and do stream and batch processing with Spark (orchestrated with Ariflow most probably) on top of a columnar DataBase
+PS: if we trully wanted to scale we'd directly upload to a cloud provider and do stream and batch processing with Spark (orchestrated with Ariflow most probably) on top of a columnar DB
 
 ![DB_SCHEMA](./images/db_schema.png)
 
@@ -49,7 +49,7 @@ PS: if we trully wanted to scale we'd directly upload to a cloud provider and do
 
 ---
 During streaming of amazon_metadata
-- Time
+- Time (seconds)
   - /server/backend 
   ![](./images/metadata_etl.png)
   - /server/backend/data/streamer.py
@@ -66,7 +66,7 @@ During streaming of amazon_metadata
 
 ---
 During streaming of amazon_reviews
-- Time for 55826 entries
+- Time (seconds) for 55826 entries 
   - /server/backend 
   ![](./images/review_backend.png)
   - /server/backend/data/streamer.py
@@ -93,3 +93,13 @@ During streaming of emotion analysis of reviews
 
 
 ---
+During updating of PCA embeddings for review emotions
+- Time: ~ 12 ms per asin. ~ 3 minutes total for ~ 150k emotionally pre-processed reviews. Didn't even bother to use asyncio
+
+---
+Fetching closest (knn) review to the average for that asin
+- Time for an asin with 2562 reviews processed
+  - /server/backend 
+  ![](./images/pca_backend.png)
+  - /server/notebooks/utils.py
+  ![](./images/pca_client.png)

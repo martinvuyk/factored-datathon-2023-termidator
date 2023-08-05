@@ -1,20 +1,20 @@
 version: "3.9"
 
 services:
-  # notebooks:
-  #   build:
-  #     context: ./notebooks
-  #     dockerfile: Dockerfile
-  #   command: >
-  #     sh -c "jupyter notebook --allow-root --no-browser --port=8888 --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''"
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "8888:8888"
-  #   depends_on:
-  #     - db
-  #   volumes:
-  #     - ./notebooks:/container
+  notebooks:
+    build:
+      context: ./notebooks
+      dockerfile: Dockerfile
+    # command: >
+    #   sh -c "jupyter notebook --allow-root --no-browser --port=8888 --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password='' 
+    #           && jupyter trust /container/termidator_unleashed.ipynb"
+    env_file:
+      - .env
+    ports:
+      - "8888:80"
+    depends_on:
+      - db
+      - backend
   backend:
     build:
       context: ./backend

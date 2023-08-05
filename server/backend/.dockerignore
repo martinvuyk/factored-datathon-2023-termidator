@@ -1,5 +1,5 @@
 env/
 .gitignore
-__pycache__
-docs/
-data/blobs/
+__pycache__/
+data/*
+README.md

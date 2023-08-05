@@ -42,7 +42,7 @@ class ApiViewMetaClass(type):
 
     def __new__(self, name, bases, attrs):
         """if the class has a method post, get, put o delete, wrap it with @handle_http_errors"""
-        methods = ["post", "get", "put", "delete"]
+        methods = ["post", "get", "put", "delete", "patch"]
         for metodo in methods:
             if metodo in attrs:
                 attrs[metodo] = self.handle_http_errors(attrs[metodo])
@@ -63,7 +63,7 @@ class ApiViewMetaClass(type):
                         raise Exception(str(e), 500)
                     raise
             except Exception as e:
-                if logging._Level == logging.DEBUG:
+                if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
                     traceback.print_exc()
                 response = ApiResponse(
                     success=False, code=e.args[1], error=e.args[0][:255]

@@ -15,6 +15,34 @@ import logging
 class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
     """Endpoint for Amazon Metadata"""
 
+    def get(self, request, *args, **kwargs):
+        """Returns asin of all reviews for given main_cat, if main_cat is None ->  all asin in db
+
+        Parameters
+        ----------
+        query_params: `Dict`
+            - main_cat: `str`
+
+        Returns
+        -------
+        ret: `ApiResponse`:
+            - success: ``True``
+            - data: `List[Dict]`
+            - code: 201
+        """
+        main_cat = request.query_params.get("main_cat")
+        products = AmazonMetadataModel.objects
+        if main_cat is not None:
+            start_cat = time.time()
+            products = products.filter(main_cat=main_cat)
+            if not products.exists():
+                raise Exception("main_cat not found", 404)
+            logging.debug(f"get cat took: {time.time() - start_cat}")
+        start_list = time.time()
+        products = list(products.values("asin"))
+        logging.debug(f"get list took: {time.time() - start_list}")
+        return ApiResponse(success=True, code=200, data=products)
+
     def post(self, request, *args, **kwargs):
         """Creates AmazonMetadataModel instances in the DB
 
@@ -70,12 +98,12 @@ class AmazonMetadataView(APIViewStructure, metaclass=ApiViewMetaClass):
 
 class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
     def get(self, request, *args, **kwargs):
-        """Returns all reviews for given asin, if asin=None then asin of all products with a review in db
+        """Returns all reviews for given asin
 
         Parameters
         ----------
         query_params: `Dict`
-            - asin: `Optional[str]`
+            - asin: `str`
 
         Returns
         -------
@@ -86,21 +114,17 @@ class AmazonReviewView(APIViewStructure, metaclass=ApiViewMetaClass):
         """
         logging.debug("revieved request")
         asin = request.query_params.get("asin")
+        if asin is None:
+            raise Exception("bad_data", 400)
         reviews = AmazonReviewModel.objects
-        if asin is not None:
-            start_filter = time.time()
-            reviews = reviews.filter(asin=asin)
-            end_filter = time.time()
-            logging.debug(f"filtering took: {end_filter - start_filter}")
-            values = ["asin", "reviewerID", "overall", "reviewText", "summary"]
-            data = list(reviews.values(*values))
-            logging.debug(f"list values took: {time.time() - end_filter}")
-            return ApiResponse(success=True, code=200, data=data)
-        else:
-            start_list = time.time()
-            products = list(AmazonMetadataModel.objects.values("asin"))
-            logging.debug(f"get list took: {time.time() - start_list}")
-            return ApiResponse(success=True, code=200, data=products)
+        start_filter = time.time()
+        reviews = reviews.filter(asin=asin)
+        end_filter = time.time()
+        logging.debug(f"filtering took: {end_filter - start_filter}")
+        values = ["asin", "reviewerID", "overall", "reviewText", "summary"]
+        data = list(reviews.values(*values))
+        logging.debug(f"list values took: {time.time() - end_filter}")
+        return ApiResponse(success=True, code=200, data=data)
 
     def post(self, request, *args, **kwargs):
         """Creates AmazonReviewModel instances in the DB. Works with single and multiple values
@@ -166,24 +190,50 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
     ]
 
     def get(self, request, *args, **kwargs):
-        """Returns a dataframe with insights for the given asin
+        """Returns a dataframe with the top 20 products for the given main_cat
 
         Parameters
         ----------
         query_params: `Dict`
-            - asin: `str`
+            - main_cat: `str`
+
+        Returns
+        -------
+        ret: `ApiResponse`:
+            - success: ``True``
+            - data: `List[Dict]`
+            - code: 200
         """
-        asin = request.query_params.get("asin")
-        if asin is None:
+        main_cat = request.query_params.get("main_cat")
+        if main_cat is None:
             raise Exception("bad_data", 400)
 
-        reviews = ReviewEmotionsModel.objects.filter(asin=asin)
-        df = pd.DataFrame.from_records(reviews.values())
-        df.drop_duplicates(inplace=True)  # just in case
-        pca = PCA(2).fit_transform(df[self.dimensions])
-        df.join(pd.DataFrame(data=pca, columns=["pca_d1", "pca_d2"]))
-
-        return ApiResponse(success=True, code=200, data="")
+        query = """
+        select 	1 as id, row_number() over (order by joy desc) as place, * from(
+        select *
+        from
+        (select 
+            asin, 
+            count(*) as amount,
+            sum(overall)/count(*) as overall, 
+            sum(anger)/count(*) as anger, 
+            sum(disgust)/count(*) as disgust, 
+            sum(fear)/count(*) as fear, 
+            sum(joy)/count(*) as joy,
+            sum(neutral)/count(*) as neutral,
+            sum(sadness)/count(*) as sadness,
+            sum(surprise)/count(*) as surprise
+        from app_reviewemotionsmodel ar 
+        where asin in (select asin from app_amazonmetadatamodel aa where aa.main_cat = %s) and overall >= 3
+        group by asin order by amount desc
+        limit 50) aa
+        order by round(overall) desc, joy desc
+        limit 20) bb
+        """
+        objs = ReviewEmotionsModel.objects.raw(query, params=[main_cat])
+        cols = ["place", "asin", "amount", *ReviewEmotionsView.dimensions]
+        top_20 = [{col: getattr(obj, col) for col in cols} for obj in objs]
+        return ApiResponse(success=True, code=200, data=top_20)
 
     def post(self, request, *args, **kwargs):
         """Creates a single instance of a Review Emotion Model
@@ -206,7 +256,7 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
         -------
         ret: `ApiResponse`:
             - success: ``True``
-            - data: ``"something"``
+            - data: ``"created"``
             - code: 201
         """
 
@@ -224,23 +274,13 @@ class ReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
 class PCAEncodedReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass):
     """Endpoint for PCA(n_components=4) encoded Review Emotions"""
 
-    pca = None
-
     def get(self, request, *args, **kwargs):
-        """Returns k nearest neighbors ("asin") to given emotion review, for products that have the same main category
+        """Gets the most "emotionally average" review for a given asin
 
         Parameters
         ----------
         query_params: `Dict`
-            - k: int
-            - overall: float
-            - anger: float
-            - disgust: float
-            - fear: float
-            - joy: float
-            - neutral: float
-            - sadness: float
-            - surprise: float
+            - asin: `str`
 
         Returns
         -------
@@ -248,89 +288,108 @@ class PCAEncodedReviewEmotionsView(APIViewStructure, metaclass=ApiViewMetaClass)
             - success: ``True``
             - data: `List[str]`
             - code: 200
-
-        Notes
-        -----
-        in the end I'm only using overall, anger, disgust, joy for vector search
-        because postgis only supports up to 4D vectors. And Its already been a lot
-        of work getting this functional without changing any table, I don't want to migrate to pgvector
-        where I would have to create and populate a new table. And impleenting PCA would
-        mean read the whole table or at least 100k rows to fit and then transform each row from emotion to 4D PCA.
-        I don't have enough time to implement it properly
         """
-        # data = request.data
-        # if self.pca is None:
-        #     PCAEncodedReviewEmotionsView.update_pca()
-        #     self.pca = PCAEncodedReviewEmotionsView.pca
-        # return ApiResponse(
-        #     success=True,
-        #     code=200,
-        #     data=pd.DataFrame(self.pca.transform(data)).to_json(),
-        # )
-        data_format = ["k", *ReviewEmotionsView.dimensions]
-        data = [request.query_params.get(d) for d in data_format]
-        if any(d is None for d in data):
+        asin = request.query_params.get("asin")
+        if asin is None:
             raise Exception("bad_data", 400)
-        k, *dimensions = data
+        start_asin = time.time()
+        reviews = PCAEncodedReviewEmotionsModel.objects.filter(asin=asin)
+        end_asin = time.time()
+        logging.debug(f"getting asin pca took: {end_asin - start_asin}")
+        if not reviews.exists():
+            raise Exception("asin_not_processed", 400)
 
-        overall, anger, disgust, _, joy, *_ = dimensions
-        vector = overall, anger, disgust, joy
-        # pca = PCAEncodedReviewEmotionsView.pca
-        # if pca is None:
-        #     PCAEncodedReviewEmotionsView.update_pca()
-        #     pca = PCAEncodedReviewEmotionsView.pca
-        # vector = pca.transform(dimensions)
+        d1, d2, d3, d4 = (
+            [rev.vec_d1 for rev in reviews],
+            [rev.vec_d2 for rev in reviews],
+            [rev.vec_d3 for rev in reviews],
+            [rev.vec_d4 for rev in reviews],
+        )
+        vector = (
+            sum(d1) / len(d1),
+            sum(d2) / len(d2),
+            sum(d3) / len(d3),
+            sum(d4) / len(d4),
+        )
 
         sql = f"""
-        WITH top_k as (
-            SELECT 1 as id, a.asin, a.reviewerID FROM (
-                SELECT review_emotion, ST_MakePoint(vec_d1, vec_d2, vec_d3, vec_d4) as vect
+        WITH most_avg as (
+            SELECT 1 as id, a.asin, a."reviewerID" FROM (
+                SELECT asin, "reviewerID", ST_MakePoint(vec_d1, vec_d2, vec_d3, vec_d4) as vect
                 FROM app_pcaencodedreviewemotionsmodel
-                ORDER BY asin
+                WHERE asin = %s
             ) as a
-            ORDER BY a.vect <-> ST_MakePoint({", ".join(vector)})
-            LIMIT %s
+            ORDER BY a.vect <-> ST_MakePoint{vector}
+            LIMIT 1
         )
 
-        SELECT 1 as id, a.reviewerID, a.asin
-        FROM app_reviewemotionsmodel as a
-        WHERE a.asin = top_k.asin and a.reviewerID = top_k.reviewerID;
+        SELECT 1 as id, a."reviewerID", a.asin, a."reviewText"
+        FROM app_amazonreviewmodel as a
+        INNER JOIN most_avg ON a.asin = most_avg.asin and a."reviewerID" = most_avg."reviewerID";
         """
-        objs = ReviewEmotionsModel.objects.raw(sql, params=[k])
-        return ApiResponse(
-            success=True,
-            code=200,
-            data=[{"asin": obj.asin, "reviewerID": obj.reviewerID} for obj in objs],
-        )
+        obj = ReviewEmotionsModel.objects.raw(sql, params=[asin])[0]
+        get_closest = time.time()
+        logging.debug(f"getting closest took: {get_closest - end_asin}")
+        cols = ["asin", "reviewerID", "reviewText"]
+        avg = {col: getattr(obj, col) for col in cols}
+        return ApiResponse(success=True, code=200, data=avg)
 
-    def update(self, request, *args, **kwargs):
-        PCAEncodedReviewEmotionsView.update_pca()
-        return ApiResponse(success=True, code=200, data="")
+    def patch(self, request, *args, **kwargs):
+        """Updates the pca representation for a given asin
 
-    @classmethod
-    def update_pca(cls):
-        pca = cls.pca if cls.pca is not None else PCA(n_components=4)
+        Parameters
+        ----------
+        query_params: `Dict`
+            - asin: `str`
 
-        table = pd.read_sql_query(
-            "SELECT * FROM app_reviewemotionsmodel aa LIMIT 100000", connection
-        )
-        subset = table[ReviewEmotionsView.dimensions]
-        table.drop(ReviewEmotionsView.dimensions, inplace=True, axis=1)
+        Returns
+        -------
+        ret: `ApiResponse`:
+            - success: ``True``
+            - data: ``"updated"``
+            - code: 200
+        """
+        asin = request.query_params.get("asin")
+        if asin is None:
+            raise Exception("bad_data", 400)
+        self.update_pca(asin)
+        return ApiResponse(success=True, code=200, data="updated")
 
-        cls.pca = pca.fit(subset)
-        df = pd.DataFrame(
-            data=cls.pca.transform(subset),
-            columns=["vec_d1", "vec_d2", "vec_d3", "vec_d4"],
-        )
+    @staticmethod
+    def update_pca(asin: str):
+        pca = PCA(n_components=4)
+        dims = ReviewEmotionsView.dimensions
+
+        start_read = time.time()
+        query = f"SELECT * FROM app_reviewemotionsmodel aa WHERE asin = %s"
+        table = pd.read_sql_query(query, connection, params=[asin])
+        if table.shape[0] < 4:
+            raise Exception("not_enough_reviews", 404)
+        end_read = time.time()
+        logging.debug(f"read from db took: {end_read - start_read}")
+
+        subset = table[dims]
+        table.drop(dims, inplace=True, axis=1)
+
+        vecs = ["vec_d1", "vec_d2", "vec_d3", "vec_d4"]
+        df = pd.DataFrame(data=pca.fit_transform(subset), columns=vecs)
+        end_pca_transf = time.time()
+        logging.debug(f"building pca took: {end_pca_transf - end_read}")
+
         results = table.join(df)
-        df.drop(df.columns, inplace=True)
+        df.drop(df.columns, inplace=True, axis=1)
         table.drop(table.columns, inplace=True, axis=1)
+        entries = [
+            PCAEncodedReviewEmotionsModel(
+                **{col: val for col, val in zip(results.columns, data)}
+            )
+            for _, *data in results.itertuples()
+        ]
+        end_build = time.time()
 
-        PCAEncodedReviewEmotionsModel.objects.bulk_update(
-            [
-                PCAEncodedReviewEmotionsModel(
-                    **{col: val for col, val in zip(results.columns, data)}
-                )
-                for _, *data in results.itertuples()
-            ]
+        logging.debug(f"building entries took: {end_build - end_pca_transf}")
+        PCAEncodedReviewEmotionsModel.objects.bulk_create(
+            entries, update_conflicts=True, unique_fields=["id"], update_fields=vecs
         )
+        results.drop(results.columns, inplace=True, axis=1)
+        logging.debug(f"write to db took: {time.time() - end_build}")

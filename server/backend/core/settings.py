@@ -24,9 +24,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-(x=i72ljp=82%-m)!k!2xa=t)!@ueth8!#2@4pa)nmqyrw6t-2"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True if os.getenv("LOGLEVEL") == "DEBUG" else False
 
-ALLOWED_HOSTS = [os.environ["BACKEND_HOST"], "localhost"]
+ALLOWED_HOSTS = [
+    os.getenv("BACKEND_HOST"),
+    "localhost",
+    "backend",
+    "127.0.0.1",
+    "0.0.0.0",
+    "notebooks",
+]
 
 
 # Application definition
